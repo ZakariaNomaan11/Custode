@@ -2,17 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ========= CONFIG ========= */
 #define MAX_CATEGORIES 50
 #define MAX_ITEMS      200
-#define MAX_NAME       50
+#define MAX_NAME       100
 #define MAX_ROLE       10
 
-/* ========= LOGIN FILES ========= */
 #define USER_TXT  "users.txt"
 #define ADMIN_TXT "admins.txt"
-
-/* ========= ENUM & STRUCTS ========= */
 
 typedef enum { STOCK_IN = 1, STOCK_OUT = 2 } StockType;
 
@@ -36,10 +32,10 @@ typedef struct {
     StockType  type;
     int        amount;
     char       username[MAX_NAME];
-    char       role[MAX_ROLE]; /* "admin" / "staff" */
+    char       role[MAX_ROLE];
 } StockTransaction;
 
-/* ========= GLOBAL ARRAYS (IN-MEMORY MASTER DATA) ========= */
+/* ========= GLOBAL STORAGE ========= */
 
 Category categories[MAX_CATEGORIES];
 Item     items[MAX_ITEMS];
@@ -517,7 +513,7 @@ void staffMenu(const char *user) {
 
 /* ========= MAIN ========= */
 
-int main() {
+int start() {
     int choice;
     while (1) {
         printf("_________________________________\n");
