@@ -2,26 +2,33 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* ================== ENUM for Stock In/Out ================== */
+
+typedef enum {
+    STOCK_IN = 1,
+    STOCK_OUT = 2
+} StockType;
+
+/* ================== Core Data Structures ================== */
+
 #define MAX_NAME 50
 #define MAX_ROLE 10
 
-/* ================== Inventory Data Structures ================== */
-
 typedef struct {
-    int   id;
+    int   itemId;
     char  name[MAX_NAME];
-    int   quantity;
+    int   quantity;       /* current available stock */
     float price;
 } Item;
 
 typedef struct {
-    int   id;
+    int   transactionId;
+    int   itemId;
+    StockType type;       /* STOCK_IN or STOCK_OUT */
+    int   amount;         /* amount added or removed */
     char  username[MAX_NAME];
     char  role[MAX_ROLE]; /* "admin" or "staff" */
-    int   itemId;
-    int   quantity;       /* +ve for stock-in, -ve for stock-out */
-    char  type[10];       /* "IN" or "OUT" */
-} Transaction;
+} StockTransaction;
 
 /* Binary files for inventory */
 const char *ITEM_FILE = "items.dat";
@@ -89,15 +96,71 @@ int saveAllRecords(const char *filename, const void *records, size_t size, int c
     return ok;
 }
 
+/* ================== Stock Validation & Update ================== */
+
+int validateStock(Item *item, StockTransaction *tx) {
+    if (tx->type == STOCK_OUT) {
+        if (item->quantity < tx->amount) {
+            printf("\nTransaction Failed: Not enough stock!\n");
+            printf("   Available: %d, Required: %d\n",
+                   item->quantity, tx->amount);
+            return 0;
+        }
+    }
+    return 1; /* valid */
+}
+
+void updateStock(Item *item, StockTransaction *tx) {
+    if (tx->type == STOCK_IN) {
+        item->quantity += tx->amount;
+        printf("Stock-In Successful! New Quantity: %d\n", item->quantity);
+    } else {
+        item->quantity -= tx->amount;
+        printf("Stock-Out Successful! New Quantity: %d\n", item->quantity);
+    }
+}
+
+void recordTransaction(StockTransaction *tx) {
+    int count = 0;
+    StockTransaction *all = (StockTransaction *)
+        loadAllRecords(TRAN_FILE, sizeof(StockTransaction), &count);
+
+    if (all && count > 0)
+        tx->transactionId = all[count - 1].transactionId + 1;
+    else
+        tx->transactionId = 1;
+
+    if (all) free(all);
+
+    if (appendRecord(TRAN_FILE, tx, sizeof(StockTransaction)))
+        printf("Transaction Recorded Successfully.\n");
+    else
+        printf("Error recording transaction.\n");
+}
+
+void processStockTransaction(Item *item, StockTransaction *tx) {
+    printf("\n--- Processing Transaction #%d ---\n", tx->transactionId);
+    printf("Item: %s (ID: %d)\n", item->name, item->itemId);
+
+    if (!validateStock(item, tx)) {
+        return;
+    }
+
+    updateStock(item, tx);
+
+    /* After successful update, persist item array outside this function. */
+    recordTransaction(tx);
+}
+
 /* ================== Inventory Helper Functions ================== */
 
 void addItem() {
     Item it;
     printf("Item ID: ");
-    scanf("%d", &it.id);
+    scanf("%d", &it.itemId);
     printf("Name: ");
     scanf("%s", it.name);
-    printf("Quantity: ");
+    printf("Initial Quantity: ");
     scanf("%d", &it.quantity);
     printf("Price: ");
     scanf("%f", &it.price);
@@ -121,7 +184,7 @@ void listItems() {
     printf("--------------------------------\n");
     for (int i = 0; i < count; i++) {
         printf("%d\t%s\t%d\t%.2f\n",
-               items[i].id, items[i].name,
+               items[i].itemId, items[i].name,
                items[i].quantity, items[i].price);
     }
     free(items);
@@ -129,36 +192,12 @@ void listItems() {
 
 int findItemIndexById(Item *items, int count, int id) {
     for (int i = 0; i < count; i++) {
-        if (items[i].id == id) return i;
+        if (items[i].itemId == id) return i;
     }
     return -1;
 }
 
-void recordTransaction(const char *username, const char *role,
-                       int itemId, int qty, const char *type) {
-    int count = 0;
-    Transaction *trans = (Transaction *)loadAllRecords(TRAN_FILE, sizeof(Transaction), &count);
-
-    Transaction t;
-    t.id = (count == 0 || !trans) ? 1 : trans[count - 1].id + 1;
-    strncpy(t.username, username, sizeof(t.username));
-    t.username[sizeof(t.username) - 1] = '\0';
-    strncpy(t.role, role, sizeof(t.role));
-    t.role[sizeof(t.role) - 1] = '\0';
-    t.itemId   = itemId;
-    t.quantity = qty;
-    strncpy(t.type, type, sizeof(t.type));
-    t.type[sizeof(t.type) - 1] = '\0';
-
-    if (trans) free(trans);
-
-    if (appendRecord(TRAN_FILE, &t, sizeof(Transaction)))
-        printf("Transaction recorded.\n");
-    else
-        printf("Error recording transaction.\n");
-}
-
-void stockIn(const char *username, const char *role) {
+void doStockIn(const char *username, const char *role) {
     int count = 0;
     Item *items = (Item *)loadAllRecords(ITEM_FILE, sizeof(Item), &count);
     if (!items || count == 0) {
@@ -180,17 +219,26 @@ void stockIn(const char *username, const char *role) {
         return;
     }
 
-    items[idx].quantity += qty;
-    if (saveAllRecords(ITEM_FILE, items, sizeof(Item), count))
-        printf("Stock updated.\n");
-    else
-        printf("Error updating stock.\n");
+    StockTransaction tx;
+    tx.itemId = id;
+    tx.type = STOCK_IN;
+    tx.amount = qty;
+    strncpy(tx.username, username, sizeof(tx.username));
+    tx.username[sizeof(tx.username) - 1] = '\0';
+    strncpy(tx.role, role, sizeof(tx.role));
+    tx.role[sizeof(tx.role) - 1] = '\0';
 
-    recordTransaction(username, role, id, qty, "IN");
+    processStockTransaction(&items[idx], &tx);
+
+    if (saveAllRecords(ITEM_FILE, items, sizeof(Item), count))
+        printf("Inventory file updated.\n");
+    else
+        printf("Error updating inventory file.\n");
+
     free(items);
 }
 
-void stockOut(const char *username, const char *role) {
+void doStockOut(const char *username, const char *role) {
     int count = 0;
     Item *items = (Item *)loadAllRecords(ITEM_FILE, sizeof(Item), &count);
     if (!items || count == 0) {
@@ -212,19 +260,22 @@ void stockOut(const char *username, const char *role) {
         return;
     }
 
-    if (items[idx].quantity < qty) {
-        printf("Not enough stock. Current qty: %d\n", items[idx].quantity);
-        free(items);
-        return;
-    }
+    StockTransaction tx;
+    tx.itemId = id;
+    tx.type = STOCK_OUT;
+    tx.amount = qty;
+    strncpy(tx.username, username, sizeof(tx.username));
+    tx.username[sizeof(tx.username) - 1] = '\0';
+    strncpy(tx.role, role, sizeof(tx.role));
+    tx.role[sizeof(tx.role) - 1] = '\0';
 
-    items[idx].quantity -= qty;
+    processStockTransaction(&items[idx], &tx);
+
     if (saveAllRecords(ITEM_FILE, items, sizeof(Item), count))
-        printf("Stock updated.\n");
+        printf("Inventory file updated.\n");
     else
-        printf("Error updating stock.\n");
+        printf("Error updating inventory file.\n");
 
-    recordTransaction(username, role, id, -qty, "OUT");
     free(items);
 }
 
@@ -245,8 +296,8 @@ void adminMenu(const char *adminName) {
         switch (choice) {
             case 1: addItem(); break;
             case 2: listItems(); break;
-            case 3: stockIn(adminName, "admin"); break;
-            case 4: stockOut(adminName, "admin"); break;
+            case 3: doStockIn(adminName, "admin"); break;
+            case 4: doStockOut(adminName, "admin"); break;
             case 5: printf("Logging out...\n"); break;
             default: printf("Invalid choice.\n");
         }
@@ -266,8 +317,8 @@ void staffMenu(const char *username) {
 
         switch (choice) {
             case 1: listItems(); break;
-            case 2: stockIn(username, "staff"); break;
-            case 3: stockOut(username, "staff"); break;
+            case 2: doStockIn(username, "staff"); break;
+            case 3: doStockOut(username, "staff"); break;
             case 4: printf("Logging out...\n"); break;
             default: printf("Invalid choice.\n");
         }
@@ -329,7 +380,6 @@ void signupAdmin() {
     printf("Admin registered successfully!\n");
 }
 
-/* returns 1 if success and fills usernameOut; 0 if failed */
 int loginUser(char *usernameOut) {
     char username[1000];
     char password[100];
@@ -349,7 +399,6 @@ int loginUser(char *usernameOut) {
     }
 }
 
-/* returns 1 if success and fills adminOut; 0 if failed */
 int loginAdmin(char *adminOut) {
     char admin[1000];
     char password[100];
@@ -369,7 +418,7 @@ int loginAdmin(char *adminOut) {
     }
 }
 
-/* ================== Main ================== */
+/* ================== Main / Custode UI ================== */
 
 int main() {
     while (1) {
@@ -401,13 +450,11 @@ int main() {
         } else if (choice == 2) {
             char username[1000];
             if (loginUser(username)) {
-                /* open STAFF (user) inventory menu */
                 staffMenu(username);
             }
         } else if (choice == 3) {
             char admin[1000];
             if (loginAdmin(admin)) {
-                /* open ADMIN inventory menu */
                 adminMenu(admin);
             }
         } else if (choice == 4) {
