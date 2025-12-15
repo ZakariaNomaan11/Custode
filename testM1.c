@@ -72,7 +72,7 @@ int test9_recordTransaction_assigns_id() {
 }
 int main() {
     resetData();
-test7_validateStock_not_enough();
+    test7_validateStock_not_enough();
     test8_updateStock_increases_quantity();
     test9_recordTransaction_assigns_id();
 
