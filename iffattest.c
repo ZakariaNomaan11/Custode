@@ -15,7 +15,7 @@ int test10_reportLowStock_marks_low_items() {
     itemCount = 2;
 
     printf("\n[Member4] Running reportLowStock() (visual check)\n");
-    reportLowStock(); /* visually, item A should appear */
+    reportLowStock(); 
 
     int actual   = (items[0].quantity <= items[0].reorder_level &&
                     items[1].quantity >  items[1].reorder_level);
