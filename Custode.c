@@ -9,6 +9,7 @@
 
 #define USER_TXT  "users.txt"
 #define ADMIN_TXT "admins.txt"
+#define TRAN_FILE "transactions.txt"
 
 typedef enum { STOCK_IN = 1, STOCK_OUT = 2 } StockType;
 
@@ -27,12 +28,12 @@ typedef struct {
 } Item;
 
 typedef struct {
-    int        transactionId;
-    int        itemId;
-    StockType  type;
-    int        amount;
-    char       username[MAX_NAME];
-    char       role[MAX_ROLE];
+    int       transactionId;
+    int       itemId;
+    StockType type;
+    int       amount;
+    char      username[MAX_NAME];
+    char      role[MAX_ROLE];
 } StockTransaction;
 
 /* ========= GLOBAL STORAGE ========= */
@@ -41,8 +42,6 @@ Category categories[MAX_CATEGORIES];
 Item     items[MAX_ITEMS];
 int      categoryCount = 0;
 int      itemCount     = 0;
-
-const char *TRAN_FILE = "transactions.dat";
 
 /* ========= SMALL HELPERS ========= */
 
@@ -53,7 +52,7 @@ void inputString(char *s, int size) {
     } else {
         s[0] = 0;
     }
-    while ((c = getchar()) != '\n' && c != EOF); /* clear extra input */
+    while ((c = getchar()) != '\n' && c != EOF); 
 }
 
 int appendRecord(const char *filename, const void *record, size_t size) {
@@ -143,7 +142,7 @@ void addItem() {
     Item it;
     it.id = itemCount + 1;
     printf("Enter Item Name: ");
-    getchar(); /* consume leftover newline */
+    getchar(); 
     inputString(it.name, MAX_NAME);
 
     listCategories();
@@ -283,7 +282,7 @@ void doStock(const char *username, const char *role, StockType type) {
     recordTransaction(&tx);
 }
 
-/* ========= REPORTS MODULE (Member 5) ========= */
+/* ========= REPORTS ========= */
 
 void reportLowStock() {
     printf("\n--- Low Stock Items (Qty <= Reorder Level) ---\n");
@@ -307,8 +306,7 @@ void reportTransactionsByItem() {
     scanf("%d", &itemId);
 
     int count = 0;
-    StockTransaction *txs =
-        (StockTransaction *)loadAllRecords(TRAN_FILE, sizeof(StockTransaction), &count);
+    StockTransaction *txs = (StockTransaction *)loadAllRecords(TRAN_FILE, sizeof(StockTransaction), &count);
     if (!txs || count == 0) {
         printf("No transactions found.\n");
         free(txs);
@@ -376,7 +374,7 @@ void reportMenu() {
     } while (ch != 4);
 }
 
-/* ========= LOGIN (TEXT FILE BASED) ========= */
+/* ========= LOGIN ========= */
 
 int userExistsInFile(const char *filename, const char *name, const char *password) {
     FILE *f = fopen(filename, "r");
@@ -451,17 +449,71 @@ int loginAdmin(char *out) {
 /* ========= MENUS ========= */
 
 void staffMenu(const char *username) {
-    
+    int choice;
+    do {
+        printf("\n=== Staff Menu (%s) ===\n", username);
+        printf("1. List Items\n");
+        printf("2. Search Item\n");
+        printf("3. Stock In\n");
+        printf("4. Stock Out\n");
+        printf("5. Logout\n");
+        printf("Choice: ");
+        scanf("%d", &choice);
+
+        if (choice == 1)      listItems();
+        else if (choice == 2) searchItem();
+        else if (choice == 3) doStock(username, "staff", STOCK_IN);
+        else if (choice == 4) doStock(username, "staff", STOCK_OUT);
+        else if (choice != 5) printf("Invalid choice.\n");
+    } while (choice != 5);
 }
 
 void adminMenu(const char *username) {
-    
+    int choice;
+    do {
+        printf("\n=== Admin Menu (%s) ===\n", username);
+        printf("1. Add Category\n");
+        printf("2. Edit Category\n");
+        printf("3. Delete Category\n");
+        printf("4. Add Item\n");
+        printf("5. Edit Item\n");
+        printf("6. Delete Item\n");
+        printf("7. List Items\n");
+        printf("8. Reports\n");
+        printf("9. Logout\n");
+        printf("Choice: ");
+        scanf("%d", &choice);
+
+        if (choice == 1)      addCategory();
+        else if (choice == 2) editCategory();
+        else if (choice == 3) deleteCategory();
+        else if (choice == 4) addItem();
+        else if (choice == 5) editItem();
+        else if (choice == 6) deleteItem();
+        else if (choice == 7) listItems();
+        else if (choice == 8) reportMenu();
+        else if (choice != 9) printf("Invalid choice.\n");
+    } while (choice != 9);
 }
+
+/* ========= MAIN ========= */
 
 int main() {
     int choice;
 
     while (1) {
+         printf("     #          #############\n");
+         printf("     #          #             #\n");
+         printf("     #          #              #\n");
+         printf("     #          #               #\n");
+         printf("     #          #              #\n");
+         printf("     #          #             #\n");
+         printf("     #          #            #\n");
+         printf("     ########## #############\n");
+       
+
+
+
         printf("*______________Custode_______________*\n");
         printf("1.Sign Up\n2.User Login\n3.Admin Login\n4.Exit\nChoice: ");
         scanf("%d", &choice);
@@ -469,9 +521,9 @@ int main() {
             int sc;
             printf("1.As User  2.As Admin\nChoice: ");
             scanf("%d", &sc);
-            if (sc == 1) signupUser();
+            if (sc == 1)      signupUser();
             else if (sc == 2) signupAdmin();
-            else printf("Invalid.\n");
+            else              printf("Invalid.\n");
         } else if (choice == 2) {
             char u[100];
             if (loginUser(u)) staffMenu(u);
@@ -487,5 +539,3 @@ int main() {
     }
     return 0;
 }
-
-
