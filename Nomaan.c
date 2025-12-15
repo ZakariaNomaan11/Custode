@@ -373,9 +373,8 @@ int loginAdmin(char *adminOut) {
 
 int start() {
     while (1) {
-        printf("_________________________________\n");
-        printf("             Custode             \n");
-        printf("_________________________________\n");
+      
+        printf("*______________Custode_______________*\n");
 
         int choice = 0;
         printf("Your Choice:\n");
