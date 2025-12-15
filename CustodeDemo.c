@@ -2,168 +2,203 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_CATEGORIES 50
-#define MAX_ITEMS      200
-#define MAX_NAME       100
-#define MAX_ROLE       10
+#define MAX_USERS     100
+#define MAX_ADMINS    50
+#define MAX_ROUTES    50
+#define MAX_VEHICLES  50
+#define MAX_TRIPS     100
+#define MAX_BOOKINGS  500
 
-#define USER_TXT  "users.txt"
-#define ADMIN_TXT "admins.txt"
-
-typedef enum { STOCK_IN = 1, STOCK_OUT = 2 } StockType;
-
-typedef struct {
-    int  id;
-    char name[MAX_NAME];
-} Category;
+/* ---------- DATA STRUCTURES ---------- */
 
 typedef struct {
-    int   id;
-    char  name[MAX_NAME];
-    int   category_id;
-    int   quantity;
-    int   reorder_level;
-    float price;
-} Item;
+    int id;
+    char username[50];
+    char password[50];
+} User;
 
 typedef struct {
-    int        transactionId;
-    int        itemId;
-    StockType  type;
-    int        amount;
-    char       username[MAX_NAME];
-    char       role[MAX_ROLE];
-} StockTransaction;
+    int id;
+    char username[50];
+    char password[50];
+} Admin;
 
-/* ========= GLOBAL STORAGE ========= */
+typedef struct {
+    int id;
+    char from[50];
+    char to[50];
+    float distance;
+} Route;
 
-Category categories[MAX_CATEGORIES];
-Item     items[MAX_ITEMS];
-int      categoryCount = 0;
-int      itemCount     = 0;
+typedef struct {
+    int id;
+    char regNumber[20];
+    int capacity;
+    char type[20];
+} Vehicle;
 
-const char *TRAN_FILE = "transactions.dat";
+typedef struct {
+    int id;
+    int routeId;
+    int vehicleId;
+    char departure[20];
+    float fare;
+    int availableSeats;
+} Trip;
 
-/* ========= SMALL HELPERS ========= */
+typedef struct {
+    int id;
+    int userId;
+    int tripId;
+    int seats;
+    char status[20];
+} Booking;
 
-void inputString(char *s, int size) {
-    int c;
-    if (fgets(s, size, stdin)) {
-        s[strcspn(s, "\n")] = 0;
-    } else {
-        s[0] = 0;
+/* ---------- GLOBAL DATABASE ---------- */
+
+User users[MAX_USERS];
+int numUsers = 0;
+
+Admin admins[MAX_ADMINS];
+int numAdmins = 0;
+
+Route routes[MAX_ROUTES];
+int numRoutes = 0;
+
+Vehicle vehicles[MAX_VEHICLES];
+int numVehicles = 0;
+
+Trip trips[MAX_TRIPS];
+int numTrips = 0;
+
+Booking bookings[MAX_BOOKINGS];
+int numBookings = 0;
+
+/* ---------- LOADING / SAVING (DB) ---------- */
+/* You already have users/admins load/save – extend similarly for trips/bookings if needed */
+
+void loadAllData(void) {
+    FILE *fp;
+
+    if ((fp = fopen("users.txt", "r"))) {
+        while (numUsers < MAX_USERS &&
+               fscanf(fp, "%d %49s %49s",
+                      &users[numUsers].id,
+                      users[numUsers].username,
+                      users[numUsers].password) == 3) {
+            numUsers++;
+        }
+        fclose(fp);
     }
-    while ((c = getchar()) != '\n' && c != EOF); /* clear extra input */
+
+    if ((fp = fopen("admins.txt", "r"))) {
+        while (numAdmins < MAX_ADMINS &&
+               fscanf(fp, "%d %49s %49s",
+                      &admins[numAdmins].id,
+                      admins[numAdmins].username,
+                      admins[numAdmins].password) == 3) {
+            numAdmins++;
+        }
+        fclose(fp);
+    }
+
+    /* For demo: initialize some trips in memory (like your first code) */
+    trips[0] = (Trip){1, 0, 0, "10:00", 500, 40};
+    trips[1] = (Trip){2, 0, 0, "12:00", 600, 30};
+    trips[2] = (Trip){3, 0, 0, "14:00", 300, 20};
+    trips[3] = (Trip){4, 0, 0, "16:00", 450, 50};
+    trips[4] = (Trip){5, 0, 0, "18:00", 550, 25};
+    numTrips = 5;
 }
 
-int appendRecord(const char *filename, const void *record, size_t size) {
-    FILE *fp = fopen(filename, "ab");
-    if (!fp) return 0;
-    int ok = fwrite(record, size, 1, fp) == 1;
-    fclose(fp);
-    return ok;
+void saveAllData(void) {
+    FILE *fp = fopen("users.txt", "w");
+    if (fp) {
+        for (int i = 0; i < numUsers; i++) {
+            fprintf(fp, "%d %s %s\n",
+                    users[i].id,
+                    users[i].username,
+                    users[i].password);
+        }
+        fclose(fp);
+    }
+
+    fp = fopen("admins.txt", "w");
+    if (fp) {
+        for (int i = 0; i < numAdmins; i++) {
+            fprintf(fp, "%d %s %s\n",
+                    admins[i].id,
+                    admins[i].username,
+                    admins[i].password);
+        }
+        fclose(fp);
+    }
+
+    /* Extend to save trips/bookings if you want persistent bookings */
 }
 
-void *loadAllRecords(const char *filename, size_t size, int *countOut) {
-    *countOut = 0;
-    FILE *fp = fopen(filename, "rb");
-    if (!fp) return NULL;
-    fseek(fp, 0, SEEK_END);
-    long bytes = ftell(fp);
-    rewind(fp);
-    if (bytes <= 0 || bytes % (long)size != 0) { fclose(fp); return NULL; }
-    int count = (int)(bytes / (long)size);
-    void *buf = malloc(size * count);
-    if (!buf) { fclose(fp); return NULL; }
-    if (fread(buf, size, count, fp) != (size_t)count) { free(buf); fclose(fp); return NULL; }
-    fclose(fp);
-    *countOut = count;
-    return buf;
-}
+/* ---------- VALIDATION HELPERS (DB CHECKS) ---------- */
 
-/* ========= CATEGORY CRUD ========= */
-
-int findCategoryIndexById(int id) {
-    for (int i = 0; i < categoryCount; i++)
-        if (categories[i].id == id) return i;
+int findUserByUsername(const char *name) {
+    for (int i = 0; i < numUsers; i++) {
+        if (strcmp(users[i].username, name) == 0)
+            return i;
+    }
     return -1;
 }
 
-void addCategory() {
-    if (categoryCount >= MAX_CATEGORIES) { printf("Category limit reached!\n"); return; }
-    Category c;
-    c.id = categoryCount + 1;
-    printf("Enter Category Name: ");
-    inputString(c.name, MAX_NAME);
-    categories[categoryCount++] = c;
-    printf("Category Added.\n");
-}
-
-void listCategories() {
-    printf("\n--- Category List ---\n");
-    for (int i = 0; i < categoryCount; i++)
-        printf("%d. %s\n", categories[i].id, categories[i].name);
-    if (!categoryCount) printf("(none)\n");
-    printf("---------------------\n");
-}
-
-void editCategory() {
-    int id;
-    printf("Enter Category ID to Edit: ");
-    scanf("%d", &id); getchar();
-    int idx = findCategoryIndexById(id);
-    if (idx == -1) { printf("Category Not Found!\n"); return; }
-    printf("New Name: ");
-    inputString(categories[idx].name, MAX_NAME);
-    printf("Category Updated.\n");
-}
-
-void deleteCategory() {
-    int id;
-    printf("Enter Category ID to Delete: ");
-    scanf("%d", &id); getchar();
-    int idx = findCategoryIndexById(id);
-    if (idx == -1) { printf("Category Not Found!\n"); return; }
-    for (int i = idx; i < categoryCount-1; i++)
-        categories[i] = categories[i+1];
-    categoryCount--;
-    printf("Category Deleted.\n");
-}
-
-/* ========= ITEM CRUD ========= */
-
-int findItemIndexById(int id) {
-    for (int i = 0; i < itemCount; i++)
-        if (items[i].id == id) return i;
+int findAdminByUsername(const char *name) {
+    for (int i = 0; i < numAdmins; i++) {
+        if (strcmp(admins[i].username, name) == 0)
+            return i;
+    }
     return -1;
 }
 
-void addItem() {
-    if (itemCount >= MAX_ITEMS) { printf("Item limit reached!\n"); return; }
-    Item it;
-    it.id = itemCount + 1;
-    printf("Enter Item Name: ");
-    getchar(); /* consume leftover newline */
-    inputString(it.name, MAX_NAME);
+int findTripById(int id) {
+    for (int i = 0; i < numTrips; i++) {
+        if (trips[i].id == id)
+            return i;
+    }
+    return -1;
+}
 
-    listCategories();
-    printf("Category ID: ");
-    scanf("%d", &it.category_id);
+int findBookingById(int id) {
+    for (int i = 0; i < numBookings; i++) {
+        if (bookings[i].id == id)
+            return i;
+    }
+    return -1;
+}
 
-    if (findCategoryIndexById(it.category_id) == -1) {
-        printf("Invalid Category.\n");
+/* ---------- SIGN UP / LOGIN (VALIDATED) ---------- */
+
+void userSignUp(void) {
+    char username[50], password[50];
+
+    printf("\n--- User Sign Up ---\n");
+    printf("Choose Username: ");
+    scanf("%49s", username);
+    printf("Choose Password: ");
+    scanf("%49s", password);
+
+    if (findUserByUsername(username) != -1) {
+        printf("Error: Username already exists!\n");
         return;
     }
 
-    printf("Quantity: ");
-    scanf("%d", &it.quantity);
-    printf("Reorder Level: ");
-    scanf("%d", &it.reorder_level);
-    printf("Price: ");
-    scanf("%f", &it.price);
+    if (numUsers >= MAX_USERS) {
+        printf("Error: User database full!\n");
+        return;
+    }
 
-    items[itemCount++] = it;
-    printf("Item Added.\n");
+    users[numUsers].id = numUsers + 1;
+    strcpy(users[numUsers].username, username);
+    strcpy(users[numUsers].password, password);
+    numUsers++;
+
+    saveAllData();
+    printf("User registered successfully!\n");
 }
 
 void listItems() {

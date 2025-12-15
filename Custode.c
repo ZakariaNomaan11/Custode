@@ -451,14 +451,12 @@ int loginAdmin(char *out) {
 /* ========= MENUS ========= */
 
 void staffMenu(const char *username) {
-    /* TODO: Implement staff menu */
+    
 }
 
 void adminMenu(const char *username) {
-    /* TODO: Implement admin menu */
+    
 }
-
-
 
 int main() {
     int choice;
