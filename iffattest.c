@@ -3,7 +3,7 @@
 #define TEST_BUILD
 #include "iffatstock.c"   
 
-/
+
 void resetData() {
     categoryCount = 0;
     itemCount = 0;
