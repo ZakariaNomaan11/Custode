@@ -9,6 +9,7 @@
 
 #define USER_TXT  "users.txt"
 #define ADMIN_TXT "admins.txt"
+#define TRAN_FILE "transactions.txt"
 
 typedef enum { STOCK_IN = 1, STOCK_OUT = 2 } StockType;
 
@@ -41,8 +42,6 @@ Item     items[MAX_ITEMS];
 int      categoryCount = 0;
 int      itemCount     = 0;
 
-/* files */
-const char *TRAN_FILE = "transactions.dat";
 
 /* helpers */
 void inputString(char *s, int size) {
