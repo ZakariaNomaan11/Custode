@@ -39,7 +39,7 @@ int test11_reportTransactionsByItem_uses_existing_file() {
     printf("\n[Member4] Now run reportTransactionsByItem() and enter 5\n");
     reportTransactionsByItem(); /* visual: should show tx1 & tx3 only */
 
-    /* no numeric check here; just success if file had 3 records */
+    
     int count = 0;
     StockTransaction *all =
         (StockTransaction *)loadAllRecords(TRAN_FILE, sizeof(StockTransaction), &count);

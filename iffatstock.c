@@ -1,4 +1,4 @@
- // =====ANALYTICS ====
+ // ANALYTICS 
 
 void reportLowStock() {
     printf("\n--- Low Stock Items (Qty <= Reorder Level) ---\n");
