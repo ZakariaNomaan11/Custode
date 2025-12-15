@@ -1,86 +1,92 @@
-#include <stdio.h>
-#include <string.h>
-
-int itemId[100], itemQty[100], reorderLevel[100];
-char itemName[100][50];
-float itemPrice[100];
-int itemCount = 0;
-
-int transItem[500], transQty[500];
-char transType[500][5];
-char transDate[500][12];
-int transCount = 0;
-
-void addItem() {
-    printf("Enter item name: "); scanf("%s", itemName[itemCount]);
-    itemId[itemCount] = itemCount + 1;
-    printf("Enter quantity: "); scanf("%d", &itemQty[itemCount]);
-    printf("Enter price: "); scanf("%f", &itemPrice[itemCount]);
-    printf("Enter reorder level: "); scanf("%d", &reorderLevel[itemCount]);
-    itemCount++;
-    printf("Item added!\n");
-}
-
-void stockIn() {
-    int id, qty;
-    char date[12];
-    printf("Item ID: "); scanf("%d", &id);
-    printf("Quantity: "); scanf("%d", &qty);
-    printf("Date (YYYY-MM-DD): "); scanf("%s", date);
-    itemQty[id-1] += qty;
-
-    transItem[transCount] = id;
-    transQty[transCount] = qty;
-    strcpy(transType[transCount], "IN");
-    strcpy(transDate[transCount], date);
-    transCount++;
-
-    printf("Stock in done!\n");
-}
-
-void stockOut() {
-    int id, qty;
-    char date[12];
-    printf("Item ID: "); scanf("%d", &id);
-    printf("Quantity: "); scanf("%d", &qty);
-    if(qty > itemQty[id-1]) { printf("Not enough stock!\n"); return; }
-    printf("Date (YYYY-MM-DD): "); scanf("%s", date);
-    itemQty[id-1] -= qty;
-
-    transItem[transCount] = id;
-    transQty[transCount] = qty;
-    strcpy(transType[transCount], "OUT");
-    strcpy(transDate[transCount], date);
-    transCount++;
-
-    printf("Stock out done!\n");
-}
-
-void reportStock() {
-    printf("\nID\tName\tQty\tPrice\n");
-    for(int i=0;i<itemCount;i++)
-        printf("%d\t%s\t%d\t%.2f\n", itemId[i], itemName[i], itemQty[i], itemPrice[i]);
-}
+ // ANALYTICS 
 
 void reportLowStock() {
-    printf("\n--- Low Stock ---\n");
-    for(int i=0;i<itemCount;i++)
-        if(itemQty[i] <= reorderLevel[i])
-            printf("%s Qty: %d ReorderLevel: %d\n", itemName[i], itemQty[i], reorderLevel[i]);
+    printf("\n--- Low Stock Items (Qty <= Reorder Level) ---\n");
+    int found = 0;
+    for (int i = 0; i < itemCount; i++) {
+        if (items[i].quantity <= items[i].reorder_level) {
+            printf("ID:%d | %s | Qty:%d | Reorder:%d\n",
+                   items[i].id,
+                   items[i].name,
+                   items[i].quantity,
+                   items[i].reorder_level);
+            found = 1;
+        }
+    }
+    if (!found) printf("No low stock items.\n");
 }
 
-int main() {
-    int choice;
-    while(1) {
-        printf("\n1.Add Item 2.Stock In 3.Stock Out 4.Stock Report 5.Low Stock 6.Exit\nChoice: ");
-        scanf("%d",&choice);
-        if(choice==1) addItem();
-        else if(choice==2) stockIn();
-        else if(choice==3) stockOut();
-        else if(choice==4) reportStock();
-        else if(choice==5) reportLowStock();
-        else break;
+void reportTransactionsByItem() {
+    int itemId;
+    printf("Enter Item ID for transaction report: ");
+    scanf("%d", &itemId);
+
+    int count = 0;
+    StockTransaction *txs =
+        (StockTransaction *)loadAllRecords(TRAN_FILE, sizeof(StockTransaction), &count);
+    if (!txs || count == 0) {
+        printf("No transactions found.\n");
+        free(txs);
+        return;
     }
-    printf("Exiting...\n");
-    return 0;
+
+    printf("\n--- Transactions for Item ID %d ---\n", itemId);
+    int found = 0;
+    for (int i = 0; i < count; i++) {
+        if (txs[i].itemId == itemId) {
+            printf("#%d | %s | User:%s | Qty:%d\n",
+                   txs[i].transactionId,
+                   txs[i].type == STOCK_IN ? "IN " : "OUT",
+                   txs[i].username,
+                   txs[i].amount);
+            found = 1;
+        }
+    }
+    if (!found) printf("No transactions for this item.\n");
+    free(txs);
+}
+
+void reportTransactionsByUser() {
+    char user[50];
+    printf("Enter username for transaction report: ");
+    scanf("%s", user);
+
+    int count = 0;
+    StockTransaction *txs =
+        (StockTransaction *)loadAllRecords(TRAN_FILE, sizeof(StockTransaction), &count);
+    if (!txs || count == 0) {
+        printf("No transactions found.\n");
+        free(txs);
+        return;
+    }
+
+    printf("\n--- Transactions by User '%s' ---\n", user);
+    int found = 0;
+    for (int i = 0; i < count; i++) {
+        if (strcmp(txs[i].username, user) == 0) {
+            printf("#%d | ItemID:%d | %s | Qty:%d\n",
+                   txs[i].transactionId,
+                   txs[i].itemId,
+                   txs[i].type == STOCK_IN ? "IN " : "OUT",
+                   txs[i].amount);
+            found = 1;
+        }
+    }
+    if (!found) printf("No transactions by this user.\n");
+    free(txs);
+}
+
+void reportMenu() {
+    int ch;
+    do {
+        printf("\n--- Reports Menu ---\n");
+        printf("1. Low Stock Items\n");
+        printf("2. Transactions by Item\n");
+        printf("3. Transactions by User\n");
+        printf("4. Back\nChoice: ");
+        scanf("%d", &ch);
+        if (ch == 1) reportLowStock();
+        else if (ch == 2) reportTransactionsByItem();
+        else if (ch == 3) reportTransactionsByUser();
+    } while (ch != 4);
 }
