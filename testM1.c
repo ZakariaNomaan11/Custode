@@ -1,14 +1,14 @@
 #include <stdio.h>
 #include <string.h>
 #define TEST_BUILD
-#include "Custode.c"
+#include "Maria.c"
 
-int categoryCount = 0;
-int itemCount = 0;
+int categoryNum = 0;
+int num = 0;
 
 void resetData() {
-    categoryCount = 0;
-    itemCount = 0;
+    categoryNum = 0;
+    num = 0;
 }
 
 /* Stock + Transaction logic */
