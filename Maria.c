@@ -1,3 +1,10 @@
+#include <stdio.h>
+#include <string.h>
+#include "suborna.c"
+   
+#define STOCK_IN 1
+#define STOCK_OUT 0
+
 int validateStock(Item *item, StockTransaction *tx) {
     if (tx->type == STOCK_OUT && item->quantity < tx->amount) {
         printf("Not enough stock! Available:%d, Required:%d\n",
@@ -18,10 +25,10 @@ void updateStock(Item *item, StockTransaction *tx) {
 }
 
 void recordTransaction(StockTransaction *tx) {
-    int count = 0;
+    int num = 0;
     StockTransaction *all =
-        (StockTransaction *)loadAllRecords(TRAN_FILE, sizeof(StockTransaction), &count);
-    tx->transactionId = (all && count > 0) ? all[count-1].transactionId + 1 : 1;
+        (StockTransaction *)loadAllRecords(TRAN_FILE, sizeof(StockTransaction), &num);
+    tx->transactionId = (all && num > 0) ? all[num - 1].transactionId + 1 : 1;
     free(all);
     if (appendRecord(TRAN_FILE, tx, sizeof(StockTransaction)))
         printf("Transaction recorded.\n");

@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <string.h>
+#include "Nomaan.c"
 int findCategoryIndexById(int id) {
     for (int i = 0; i < categoryCount; i++)
         if (categories[i].id == id) return i;

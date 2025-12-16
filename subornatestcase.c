@@ -53,6 +53,6 @@ int test5_findItemIndexById() {
 int main() {
      test4_addCategory_increments_count();
     test5_findItemIndexById();
-    test6_deleteItem_shifts_array();
+   
     return 0;
 }

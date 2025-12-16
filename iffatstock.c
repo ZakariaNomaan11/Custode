@@ -1,5 +1,7 @@
  // ANALYTICS 
-
+#include <stdio.h>
+#include <string.h>
+#include "Maria.c"
 void reportLowStock() {
     printf("\n--- Low Stock Items (Qty <= Reorder Level) ---\n");
     int found = 0;
@@ -88,5 +90,112 @@ void reportMenu() {
         if (ch == 1) reportLowStock();
         else if (ch == 2) reportTransactionsByItem();
         else if (ch == 3) reportTransactionsByUser();
+    } while (ch != 4);
+}
+// Edited 
+
+int userExistsInFile(const char *filename, const char *name, const char *password) {
+    FILE *f = fopen(filename, "r");
+    if (!f) return 0;
+    char u[100], p[100];
+    while (fscanf(f, "%s %s", u, p) == 2) {
+        if (!strcmp(u, name) && !strcmp(p, password)) {
+            fclose(f);
+            return 1;
+        }
+    }
+    fclose(f);
+    return 0;
+}
+
+void signupUser() {
+    char u[100], p[100];
+    printf("User Sign Up\nUsername: ");
+    scanf("%s", u);
+    printf("Password: ");
+    scanf("%s", p);
+    FILE *f = fopen(USER_TXT, "a");
+    if (!f) { printf("Error opening user file.\n"); return; }
+    fprintf(f, "%s %s\n", u, p);
+    fclose(f);
+    printf("User registered.\n");
+}
+
+void signupAdmin() {
+    char u[100], p[100];
+    printf("Admin Sign Up\nUsername: ");
+    scanf("%s", u);
+    printf("Password: ");
+    scanf("%s", p);
+    FILE *f = fopen(ADMIN_TXT, "a");
+    if (!f) { printf("Error opening admin file.\n"); return; }
+    fprintf(f, "%s %s\n", u, p);
+    fclose(f);
+    printf("Admin registered.\n");
+}
+
+int loginUser(char *out) {
+    char u[100], p[100];
+    printf("User Login\nUsername: ");
+    scanf("%s", u);
+    printf("Password: ");
+    scanf("%s", p);
+    if (userExistsInFile(USER_TXT, u, p)) {
+        strcpy(out, u);
+        printf("Login successful.\n");
+        return 1;
+    }
+    printf("Invalid credentials.\n");
+    return 0;
+}
+
+int loginAdmin(char *out) {
+    char u[100], p[100];
+    printf("Admin Login\nUsername: ");
+    scanf("%s", u);
+    printf("Password: ");
+    scanf("%s", p);
+    if (userExistsInFile(ADMIN_TXT, u, p)) {
+        strcpy(out, u);
+        printf("Login successful.\n");
+        return 1;
+    }
+    printf("Invalid credentials.\n");
+    return 0;
+}
+
+/* menus */
+
+void adminMenu(const char *admin) {
+    int ch;
+    do {
+        printf("\n=== Admin Menu ===\n");
+        printf("1.Category Management\n");
+        printf("2.Item Management\n");
+        printf("3.Stock In\n");
+        printf("4.Stock Out\n");
+        printf("5.Reports\n");
+        printf("6.Logout\nChoice: ");
+        scanf("%d", &ch);
+        if (ch == 1) {  }
+        else if (ch == 2) {  }
+        else if (ch == 3) doStock(admin, "admin", STOCK_IN);
+        else if (ch == 4) doStock(admin, "admin", STOCK_OUT);
+        else if (ch == 5) reportMenu();
+    } while (ch != 6);
+}
+
+void staffMenu(const char *user) {
+    int ch;
+    do {
+        printf("\n=== User Menu ===\n");
+        printf("1.List Items\n");
+        printf("2.Stock In\n");
+        printf("3.Stock Out\n");
+        printf("4.Logout\nChoice: ");
+        scanf("%d", &ch);
+        if (ch == 1) listItems();
+        else if (ch == 2) doStock(user, "staff", STOCK_IN);
+        else if (ch == 3) doStock(user, "staff", STOCK_OUT);
     } while (ch != 4);
 }

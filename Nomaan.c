@@ -11,7 +11,7 @@
 #define ADMIN_TXT "admins.txt"
 #define TRAN_FILE "transactions.txt"
 
-typedef enum { STOCK_IN = 1, STOCK_OUT = 2 } StockType;
+typedef enum { STOCK_GO = 1, STOCK_AWAY = 2 } StockType;
 
 typedef struct {
     int  id;

@@ -1,4 +1,13 @@
-int userExistsInFile(const char *filename, const char *name, const char *password) {
+#include <stdio.h>
+#include <string.h>
+#include "iffatstock.c"
+//#include "Maria.c"
+
+//#define STOCK_IN 1
+//#define STOCK_OUT 0
+
+
+int userfile(const char *filename, const char *name, const char *password) {
     FILE *f = fopen(filename, "r");
     if (!f) return 0;
     char u[100], p[100];
@@ -12,7 +21,7 @@ int userExistsInFile(const char *filename, const char *name, const char *passwor
     return 0;
 }
 
-void signupUser() {
+void userSignup() {
     char u[100], p[100];
     printf("User Sign Up\nUsername: ");
     scanf("%s", u);
@@ -38,13 +47,13 @@ void signupAdmin() {
     printf("Admin registered.\n");
 }
 
-int loginUser(char *out) {
+int userLogin(char *out) {
     char u[100], p[100];
     printf("User Login\nUsername: ");
     scanf("%s", u);
     printf("Password: ");
     scanf("%s", p);
-    if (userExistsInFile(USER_TXT, u, p)) {
+    if (userfile(USER_TXT, u, p)) {
         strcpy(out, u);
         printf("Login successful.\n");
         return 1;
@@ -53,13 +62,13 @@ int loginUser(char *out) {
     return 0;
 }
 
-int loginAdmin(char *out) {
+int adminLogin(char *out) {
     char u[100], p[100];
     printf("Admin Login\nUsername: ");
     scanf("%s", u);
     printf("Password: ");
     scanf("%s", p);
-    if (userExistsInFile(ADMIN_TXT, u, p)) {
+    if (userfile(ADMIN_TXT, u, p)) {
         strcpy(out, u);
         printf("Login successful.\n");
         return 1;
@@ -70,7 +79,7 @@ int loginAdmin(char *out) {
 
 /* menus */
 
-void adminMenu(const char *admin) {
+void menuAdmin(const char *admin) {
     int ch;
     do {
         printf("\n=== Admin Menu ===\n");
@@ -89,7 +98,7 @@ void adminMenu(const char *admin) {
     } while (ch != 6);
 }
 
-void staffMenu(const char *user) {
+void menuStaff(const char *user) {
     int ch;
     do {
         printf("\n=== User Menu ===\n");
@@ -116,15 +125,15 @@ int start() {
             int sc;
             printf("1.As User  2.As Admin\nChoice: ");
             scanf("%d", &sc);
-            if (sc == 1) signupUser();
+            if (sc == 1) userSignup();
             else if (sc == 2) signupAdmin();
             else printf("Invalid.\n");
         } else if (choice == 2) {
             char u[100];
-            if (loginUser(u)) staffMenu(u);
+            if (userLogin(u)) menuStaff(u);
         } else if (choice == 3) {
             char a[100];
-            if (loginAdmin(a)) adminMenu(a);
+            if (adminLogin(a)) menuAdmin(a);
         } else if (choice == 4) {
             printf("Exiting...\n");
             break;

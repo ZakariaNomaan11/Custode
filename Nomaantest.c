@@ -28,7 +28,7 @@ int test1_inputString_basic() {
 int test2_append_and_load_transaction() {
     remove("transactions.dat"); 
 
-    StockTransaction tx = {1, 5, STOCK_IN, 10, "admin1", "admin"};
+    StockTransaction tx = {1, 5, STOCK_GO, 10, "admin1", "admin"};
     int ok = appendRecord(TRAN_FILE, &tx, sizeof(StockTransaction));
 
     int count = 0;
